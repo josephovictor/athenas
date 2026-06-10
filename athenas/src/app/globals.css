@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand: #3b82f6;
+  --color-brand-light: #dbeafe;
+  --color-brand-dark: #1d4ed8;
+  --color-page: #f3f4f6;
+}
+
+/* ... keep your existing body/root CSS rules below this ... */
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
