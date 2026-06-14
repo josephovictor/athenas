@@ -2,42 +2,44 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { GraduationCap, User, Lock, Eye, EyeOff, Info } from "lucide-react";
 
-export default function SetupPage() {
+export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSetup = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
 
     try {
-      const res = await fetch("/api/setup", {
+      const res = await fetch("/api/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
 
       if (res.ok) {
-        alert("Coordinator account created!");
-        router.push("/login");
+        router.push("/dashboard"); 
       } else {
         const data = await res.json();
-        alert(`Error: ${data.error}`);
+        setError(data.error || "Invalid credentials.");
       }
-    } catch (error) {
-      alert("Something went wrong!");
+    } catch (err) {
+      setError("A network error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 text-[var(--color-brand-dark)]">
+    <div className="flex h-screen overflow-hidden items-center justify-center bg-gray-50">
       {/* Container max-width set to exactly 426px (95% of original) */}
       <div className="w-full max-w-[426px] bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col">
         
@@ -55,22 +57,28 @@ export default function SetupPage() {
 
         {/* White Body Zone */}
         <div className="p-8">
-          <h2 className="text-lg font-bold text-[var(--color-brand-dark)] mb-6">Initialize System</h2>
+          <h2 className="text-lg font-bold text-[var(--color-brand-dark)] mb-6">Sign in to your account</h2>
 
-          <form onSubmit={handleSetup} className="space-y-4">
+          {error && (
+            <div className="mb-6 p-3 bg-[var(--color-brand-danger)]/10 text-[var(--color-brand-danger)] text-sm rounded-lg border border-[var(--color-brand-danger)]/20 font-medium">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
             {/* Email Field */}
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">
-                Administrator Email
+                Email address or matriculation number
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
                   <User size={18} />
                 </div>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  placeholder="admin@athenas.com"
+                  placeholder="Enter your email or mat number"
                   className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-[var(--color-brand-teal)] focus:ring-1 focus:ring-[var(--color-brand-teal)] outline-none transition-colors text-sm placeholder:text-gray-300"
                   onChange={(e) => setEmail(e.target.value)}
                 />
@@ -80,7 +88,7 @@ export default function SetupPage() {
             {/* Password Field */}
             <div>
               <label className="block text-sm font-semibold text-gray-600 mb-1.5">
-                Secure Password
+                Password
               </label>
               <div className="relative mb-2">
                 <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
@@ -101,22 +109,28 @@ export default function SetupPage() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
+              
+              <div className="flex justify-end">
+                <Link href="/forgot-password" className="text-sm font-semibold text-[var(--color-brand-teal)] hover:text-[var(--color-brand-slate)] transition-colors">
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[var(--color-brand-teal)] text-white py-3 mt-6 rounded-lg text-sm font-semibold hover:bg-[var(--color-brand-teal)]/90 active:bg-[var(--color-brand-slate)] transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
+              className="w-full bg-[var(--color-brand-teal)] text-white py-3 mt-2 rounded-lg text-sm font-semibold hover:bg-[var(--color-brand-teal)]/90 active:bg-[var(--color-brand-slate)] transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
             >
-              {loading ? "Creating..." : "Initialize Account"}
+              {loading ? "Signing In..." : "Sign In"}
             </button>
           </form>
 
           {/* Info Section */}
           <div className="mt-8 pt-6 border-t border-gray-100 flex gap-3">
-            <Info size={16} className="text-[var(--color-brand-teal)] flex-shrink-0 mt-0.5" />
+            <Info size={16} className="text-gray-400 flex-shrink-0 mt-0.5" />
             <p className="text-xs text-gray-500 leading-relaxed">
-              This action creates the Master Coordinator account for the Athenas portal. Please keep these credentials secure.
+              Access is by invitation only. Contact your coordinator if you have not received your invitation email.
             </p>
           </div>
         </div>

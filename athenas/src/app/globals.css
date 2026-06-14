@@ -1,35 +1,38 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand: #3b82f6;
-  --color-brand-light: #dbeafe;
-  --color-brand-dark: #1d4ed8;
-  --color-page: #f3f4f6;
+  --color-brand-teal: #3C6E71;
+  --color-brand-slate: #284B63;
+  --color-brand-dark: #353535;
+  --color-brand-light: #D9D9D9;
+  --color-brand-danger: #A71D31;
+  --color-brand-accent: #3F0D12;
 }
 
-/* ... keep your existing body/root CSS rules below this ... */
+/* =========================================
+   GLOBAL SCROLLBAR STYLING
+   Applies to every scrollable area in the app
+   ========================================= */
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+::-webkit-scrollbar-track {
+  background: transparent;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+::-webkit-scrollbar-thumb {
+  background: #CBD5E1; /* Tailwind slate-300 */
+  border-radius: 10px;
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8; /* Tailwind slate-400 */
+}
+
+/* THIS COMPLETELY REMOVES THE ARROWS GLOBALLY */
+::-webkit-scrollbar-button {
+  display: none; 
 }
