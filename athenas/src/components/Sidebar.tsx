@@ -1,0 +1,69 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { 
+  GraduationCap, 
+  Home, 
+  Users, 
+  BookOpen, 
+  ClipboardList 
+} from "lucide-react";
+
+export default function Sidebar() {
+  const pathname = usePathname();
+
+  const navItems = [
+    { name: "Home", href: "/dashboard", icon: Home },
+    { name: "Users", href: "/dashboard/users", icon: Users },
+    { name: "Seminar", href: "/dashboard/seminar", icon: BookOpen },
+    { name: "Project", href: "/dashboard/project", icon: ClipboardList },
+  ];
+
+  return (
+    <aside className="w-64 bg-[var(--color-brand-dark)] text-white flex flex-col z-20 fixed h-screen">
+      <div className="p-6 mb-2">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-[var(--color-brand-teal)] flex items-center justify-center text-white shadow-sm">
+            <GraduationCap size={20} strokeWidth={2.5} />
+          </div>
+          <h2 className="text-xl font-bold tracking-wider">Athenas</h2>
+        </div>
+      </div>
+
+      <nav className="px-4 pb-6 space-y-2 text-sm font-medium border-b border-white/10">
+        {navItems.map((item) => {
+          const isActive = item.href === '/dashboard' 
+            ? pathname === item.href 
+            : pathname.startsWith(item.href);
+
+          return (
+            <Link 
+              key={item.name} 
+              href={item.href} 
+              className={`flex items-center gap-3 p-3 rounded-lg transition-colors ${
+                isActive 
+                  ? "bg-[var(--color-brand-teal)] text-white shadow-sm"
+                  : "text-[var(--color-brand-light)] hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              <item.icon size={18} /> {item.name}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="flex-1"></div>
+
+      <Link href="/dashboard/profile" className="p-6 pt-5 flex items-center gap-3 hover:bg-white/5 transition-colors cursor-pointer border-t border-white/10">
+        <div className="w-10 h-10 rounded-full bg-[var(--color-brand-slate)] flex items-center justify-center text-xs font-bold text-white shadow-sm">
+          CO
+        </div>
+        <div>
+          <p className="text-sm font-bold text-white">Coordinator</p>
+          <p className="text-xs text-[var(--color-brand-light)]/70 font-normal">Admin</p>
+        </div>
+      </Link>
+    </aside>
+  );
+}

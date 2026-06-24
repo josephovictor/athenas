@@ -2,131 +2,265 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { GraduationCap, User, Lock, Eye, EyeOff, Info } from "lucide-react";
+import { signIn } from "next-auth/react";
 
 export default function SetupPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSetup = async (e: React.FormEvent<HTMLFormElement>) => {
+  // Step 1: Coordinator Details
+  const [coordinatorData, setCoordinatorData] = useState({
+    fullName: "",
+    email: "",
+    password: "",
+    phone: "",
+  });
+
+  // Step 2: Cohort Details
+  const [cohortData, setCohortData] = useState({
+    name: "",
+    academicYear: "",
+  });
+
+  const handleCoordinatorSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setError(""); // Clear error before submitting
 
     try {
-      const res = await fetch("/api/setup", {
+      const res = await fetch("/api/coordinator/setup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          fullName: coordinatorData.fullName,
+          email: coordinatorData.email,
+          password: coordinatorData.password,
+          phone: coordinatorData.phone,
+        }),
       });
 
-      if (res.ok) {
-        alert("Coordinator account created!");
-        router.push("/login");
-      } else {
-        const data = await res.json();
-        alert(`Error: ${data.error}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Failed to create coordinator account");
+        return;
       }
-    } catch (error) {
-      alert("Something went wrong!");
+
+      // Clear error and move to step 2
+      setError("");
+      setStep(2);
+    } catch (err) {
+      setError("An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+ const handleCohortSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoading(true);
+  setError("");
+
+  try {
+    const res = await fetch("/api/coordinator/cohorts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: cohortData.name,
+        academic_year: cohortData.academicYear,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error || "Failed to create cohort");
+      return;
+    }
+
+    // ✅ AUTO-LOGIN after successful setup
+    const signInResult = await signIn("credentials", {
+      email: coordinatorData.email,
+      password: coordinatorData.password,
+      redirect: false, // Don't redirect yet
+    });
+
+    if (signInResult?.error) {
+      console.error("Auto-login failed:", signInResult.error);
+      // If auto-login fails, just redirect to login page
+      router.push("/login");
+    } else {
+      // Successfully logged in - redirect to dashboard
+      router.push("/dashboard/users");
+    }
+  } catch (err) {
+    setError("An error occurred. Please try again.");
+  } finally {
+    setLoading(false);
+  }
+};
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 text-[var(--color-brand-dark)]">
-      {/* Container max-width set to exactly 426px (95% of original) */}
-      <div className="w-full max-w-[426px] bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col">
-        
-        {/* Dark Header Zone */}
-        <div className="bg-[var(--color-brand-dark)] p-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-8 h-8 rounded-lg bg-[var(--color-brand-teal)] flex items-center justify-center text-white shadow-sm">
-              <GraduationCap size={20} strokeWidth={2.5} />
-            </div>
-            <h1 className="text-2xl font-bold text-white tracking-wide">Athenas</h1>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
+        {/* Logo/Title */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-[var(--color-brand-dark)] mb-2">
+            Welcome to Athenas
+          </h1>
+          <p className="text-gray-600">System Setup Wizard</p>
+          
+          {/* Progress Indicator */}
+          <div className="flex items-center justify-center gap-2 mt-4">
+            <div className={`w-3 h-3 rounded-full ${step >= 1 ? "bg-[var(--color-brand-teal)]" : "bg-gray-300"}`} />
+            <div className={`w-8 h-0.5 ${step >= 2 ? "bg-[var(--color-brand-teal)]" : "bg-gray-300"}`} />
+            <div className={`w-3 h-3 rounded-full ${step >= 2 ? "bg-[var(--color-brand-teal)]" : "bg-gray-300"}`} />
           </div>
-          <p className="text-[var(--color-brand-light)] text-sm font-medium">Digital Workflow and Project Management</p>
-          <div className="w-8 h-0.5 bg-[var(--color-brand-danger)] mt-4 rounded-full"></div>
         </div>
 
-        {/* White Body Zone */}
-        <div className="p-8">
-          <h2 className="text-lg font-bold text-[var(--color-brand-dark)] mb-6">Initialize System</h2>
+        {error && (
+          <div className="mb-6 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg">
+            {error}
+          </div>
+        )}
 
-          <form onSubmit={handleSetup} className="space-y-4">
-            {/* Email Field */}
+        {/* Step 1: Create Coordinator Account */}
+        {step === 1 && (
+          <form onSubmit={handleCoordinatorSubmit} className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Step 1: Create Coordinator Account
+            </h2>
+
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">
-                Administrator Email
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Full Name
               </label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                  <User size={18} />
-                </div>
-                <input
-                  type="email"
-                  required
-                  placeholder="admin@athenas.com"
-                  className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-[var(--color-brand-teal)] focus:ring-1 focus:ring-[var(--color-brand-teal)] outline-none transition-colors text-sm placeholder:text-gray-300"
-                  onChange={(e) => setEmail(e.target.value)}
-                />
-              </div>
+              <input
+                type="text"
+                required
+                value={coordinatorData.fullName}
+                onChange={(e) => setCoordinatorData({ ...coordinatorData, fullName: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent"
+                placeholder="Dr. John Doe"
+              />
             </div>
 
-            {/* Password Field */}
             <div>
-              <label className="block text-sm font-semibold text-gray-600 mb-1.5">
-                Secure Password
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Email Address
               </label>
-              <div className="relative mb-2">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-                  <Lock size={18} />
-                </div>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-10 py-3 rounded-lg border border-gray-200 focus:border-[var(--color-brand-teal)] focus:ring-1 focus:ring-[var(--color-brand-teal)] outline-none transition-colors text-sm placeholder:text-gray-300"
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              <input
+                type="email"
+                required
+                value={coordinatorData.email}
+                onChange={(e) => setCoordinatorData({ ...coordinatorData, email: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent"
+                placeholder="coordinator@university.edu"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                value={coordinatorData.password}
+                onChange={(e) => setCoordinatorData({ ...coordinatorData, password: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent"
+                placeholder="••••••••"
+                minLength={6}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={coordinatorData.phone}
+                onChange={(e) => setCoordinatorData({ ...coordinatorData, phone: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent"
+                placeholder="+234 801 234 5678"
+              />
             </div>
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[var(--color-brand-teal)] text-white py-3 mt-6 rounded-lg text-sm font-semibold hover:bg-[var(--color-brand-teal)]/90 active:bg-[var(--color-brand-slate)] transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
+              className="w-full bg-[var(--color-brand-teal)] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
             >
-              {loading ? "Creating..." : "Initialize Account"}
+              {loading ? "Creating Account..." : "Continue to Step 2"}
             </button>
           </form>
+        )}
 
-          {/* Info Section */}
-          <div className="mt-8 pt-6 border-t border-gray-100 flex gap-3">
-            <Info size={16} className="text-[var(--color-brand-teal)] flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-gray-500 leading-relaxed">
-              This action creates the Master Coordinator account for the Athenas portal. Please keep these credentials secure.
-            </p>
-          </div>
-        </div>
+        {/* Step 2: Create Cohort */}
+        {step === 2 && (
+          <form onSubmit={handleCohortSubmit} className="space-y-4">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">
+              Step 2: Setup Academic Session
+            </h2>
 
-        {/* Dark Footer Zone */}
-        <div className="bg-[var(--color-brand-dark)] px-8 py-4 flex items-center justify-between mt-auto">
-          <span className="text-xs text-white/50 font-medium">© 2026 Athenas</span>
-          <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand-danger)]"></div>
-        </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cohort Name
+              </label>
+              <input
+                type="text"
+                required
+                value={cohortData.name}
+                onChange={(e) => setCohortData({ ...cohortData, name: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent"
+                placeholder="2024/2025 Academic Session"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                e.g., "2024/2025 Academic Session" or "Fall 2024 Cohort"
+              </p>
+            </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Academic Year
+              </label>
+              <input
+                type="text"
+                required
+                value={cohortData.academicYear}
+                onChange={(e) => setCohortData({ ...cohortData, academicYear: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[var(--color-brand-teal)] focus:border-transparent"
+                placeholder="2024/2025"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                e.g., "2024/2025" or "2024"
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={() => {
+                  setError(""); // Clear error when going back
+                  setStep(1);
+                }}
+                className="flex-1 bg-gray-200 text-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors"
+              >
+                Back
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="flex-1 bg-[var(--color-brand-teal)] text-white py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+              >
+                {loading ? "Setting Up..." : "Complete Setup"}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );

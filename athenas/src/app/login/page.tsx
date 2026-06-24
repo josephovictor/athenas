@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
 import Link from "next/link";
 import { GraduationCap, User, Lock, Eye, EyeOff, Info } from "lucide-react";
 
@@ -18,20 +19,30 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
+    console.log("Attempting login with:", { email });
+
     try {
-      const res = await fetch("/api/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
       });
 
-      if (res.ok) {
-        router.push("/dashboard"); 
+      console.log("SignIn result:", result);
+
+      if (result?.error) {
+        console.error("Login error:", result.error);
+        setError(result.error === "CredentialsSignin" ? "Invalid credentials." : result.error);
+      } else if (result?.ok) {
+        console.log("Login successful, redirecting...");
+        // Force hard redirect to ensure session loads
+        window.location.href = "/dashboard";
       } else {
-        const data = await res.json();
-        setError(data.error || "Invalid credentials.");
+        console.error("Unexpected result:", result);
+        setError("An unexpected error occurred. Please try again.");
       }
     } catch (err) {
+      console.error("Login exception:", err);
       setError("A network error occurred. Please try again.");
     } finally {
       setLoading(false);
@@ -40,7 +51,6 @@ export default function LoginPage() {
 
   return (
     <div className="flex h-screen overflow-hidden items-center justify-center bg-gray-50">
-      {/* Container max-width set to exactly 426px (95% of original) */}
       <div className="w-full max-w-[426px] bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col">
         
         {/* Dark Header Zone */}
@@ -79,8 +89,9 @@ export default function LoginPage() {
                   type="text"
                   required
                   placeholder="Enter your email or mat number"
-                  className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-[var(--color-brand-teal)] focus:ring-1 focus:ring-[var(--color-brand-teal)] outline-none transition-colors text-sm placeholder:text-gray-300"
+                  value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-200 focus:border-[var(--color-brand-teal)] focus:ring-1 focus:ring-[var(--color-brand-teal)] outline-none transition-colors text-sm placeholder:text-gray-300"
                 />
               </div>
             </div>
@@ -98,8 +109,9 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"}
                   required
                   placeholder="••••••••"
-                  className="w-full pl-10 pr-10 py-3 rounded-lg border border-gray-200 focus:border-[var(--color-brand-teal)] focus:ring-1 focus:ring-[var(--color-brand-teal)] outline-none transition-colors text-sm placeholder:text-gray-300"
+                  value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-10 pr-10 py-3 rounded-lg border border-gray-200 focus:border-[var(--color-brand-teal)] focus:ring-1 focus:ring-[var(--color-brand-teal)] outline-none transition-colors text-sm placeholder:text-gray-300"
                 />
                 <button
                   type="button"
@@ -140,7 +152,6 @@ export default function LoginPage() {
           <span className="text-xs text-white/50 font-medium">© 2026 Athenas</span>
           <div className="w-1.5 h-1.5 rounded-full bg-[var(--color-brand-danger)]"></div>
         </div>
-
       </div>
     </div>
   );
