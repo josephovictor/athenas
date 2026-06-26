@@ -10,79 +10,57 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: "Credentials",
       credentials: {
-        identifier: { label: "Email or Matric Number", type: "text" },
+        email: { label: "Email or Matric Number", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.identifier || !credentials?.password) {
-          throw new Error("Invalid credentials format.");
+        if (!credentials?.email || !credentials?.password) return null;
+
+        // Find user by email
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email.toLowerCase() },
+        });
+
+        if (!user) return null;
+
+        // Verify password
+        const isValid = await bcrypt.compare(credentials.password, user.password);
+        if (!isValid) return null;
+
+        // CRITICAL: Spec requires account activation check
+        if (!user.is_activated) {
+          throw new Error("Your account has not been activated. Please check your email for the invitation link.");
         }
 
-        let userRecord = null;
-
-        // 1. Check if the identifier is an email
-        if (credentials.identifier.includes("@")) {
-          userRecord = await prisma.user.findUnique({
-            where: { email: credentials.identifier.toLowerCase() },
-          });
-        } else {
-          // 2. If it's not an email, treat it as a student matriculation number
-          const studentRecord = await prisma.student.findUnique({
-            where: { mat_number: credentials.identifier },
-            include: { user: true },
-          });
-          if (studentRecord) {
-            userRecord = studentRecord.user;
-          }
-        }
-
-        // 3. Validate user existence and password
-        if (!userRecord) {
-          throw new Error("No user found with those details.");
-        }
-
-        const isValidPassword = await bcrypt.compare(
-          credentials.password,
-          userRecord.password
-        );
-
-        if (!isValidPassword) {
-          throw new Error("Incorrect password.");
-        }
-
-        // 4. Return user object for the session token
+        // Return user object (NextAuth will store this in the JWT)
         return {
-          id: userRecord.id,
-          email: userRecord.email,
-          role: userRecord.role,
-          isActivated: userRecord.is_activated,
+          id: user.id,
+          email: user.email,
+          role: user.role,
         };
       },
     }),
   ],
   callbacks: {
+    // Pass user data to the JWT token
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
         token.role = (user as any).role;
-        token.isActivated = (user as any).isActivated;
       }
       return token;
     },
+    // Pass JWT data to the session object (accessible in frontend)
     async session({ session, token }) {
       if (session.user) {
         (session.user as any).id = token.id;
         (session.user as any).role = token.role;
-        (session.user as any).isActivated = token.isActivated;
       }
       return session;
     },
   },
   pages: {
-    signIn: "/login",
-  },
-  session: {
-    strategy: "jwt",
+    signIn: "/login", // Redirect to our custom login page
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

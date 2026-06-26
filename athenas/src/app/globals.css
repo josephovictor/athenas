@@ -1,6 +1,10 @@
 @import "tailwindcss";
 
-@theme {
+html {
+  font-size: 80%; /* This shrinks text, buttons, margins, and windows all at once! */
+}
+
+:root {
   --color-brand-teal: #3C6E71;
   --color-brand-slate: #284B63;
   --color-brand-dark: #353535;

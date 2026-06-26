@@ -1,16 +1,13 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
 }
 
-
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // ==========================================
@@ -45,7 +42,7 @@ enum TopicProposalStatus {
   declined
 }
 
-enum SubStatus { // For batches and submissions
+enum BatchStatus {
   pending_confirmation
   pending_review
   reviewed
@@ -103,7 +100,7 @@ enum NotificationType {
 }
 
 // ==========================================
-// 1. USER TABLES (9 Tables)
+// 1. USER TABLES
 // ==========================================
 model Cohort {
   id             String          @id @default(uuid())
@@ -150,6 +147,7 @@ model Student {
   othername    String?
   email        String
   phone_number String
+  level        String  // NEW: e.g., "400L"
   cohort_id    String
 
   user   User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
@@ -176,27 +174,40 @@ model Student {
 }
 
 model Lecturer {
-  id                     String @id @default(uuid())
-  user_id                String @unique
-  name                   String
+  id                    String   @id @default(cuid())
+  name                  String
+  title                 String
   area_of_specialization String
-  cohort_id              String
+  phone                 String
+  email                 String?  @unique  // Added ?
+  cohort_id             String?  // Added ?
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
 
-  user             User               @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  cohort           Cohort             @relation(fields: [cohort_id], references: [id])
-  supervisors      Supervisor[]
-  seminar_panels   SeminarPanelist[]
-  project_panels   ProjectPanelist[]
+  // Relations
+  user       User       @relation(fields: [user_id], references: [id])
+  user_id    String     @unique
+  cohort     Cohort?    @relation(fields: [cohort_id], references: [id]) // Added ?
+  supervisors Supervisor[]
+  seminar_panels SeminarPanelist[]
+  project_panels ProjectPanelist[]
 }
 
 model ExternalPanelist {
-  id        String @id @default(uuid())
-  user_id   String @unique
-  name      String
-  cohort_id String
+  id                    String   @id @default(cuid())
+  name                  String
+  title                 String
+  specialization        String
+  phone                 String
+  email                 String   @unique  // ADD THIS
+  cohort_id             String   // ADD THIS
+  created_at            DateTime @default(now())
+  updated_at            DateTime @updatedAt
 
-  user           User              @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  cohort         Cohort            @relation(fields: [cohort_id], references: [id])
+  // Relations
+  user       User       @relation(fields: [user_id], references: [id])
+  user_id    String     @unique
+  cohort     Cohort     @relation(fields: [cohort_id], references: [id])
   seminar_panels SeminarPanelist[]
   project_panels ProjectPanelist[]
 }
@@ -244,7 +255,7 @@ model ProjectPanelist {
 }
 
 // ==========================================
-// 2. GROUP TABLES (6 Tables)
+// 2. GROUP TABLES
 // ==========================================
 model SeminarGroup {
   id         String   @id @default(uuid())
@@ -319,7 +330,7 @@ model SubgroupMember {
 }
 
 // ==========================================
-// 3. PORTAL STATE TABLE (1 Table)
+// 3. PORTAL STATE TABLE
 // ==========================================
 model PortalState {
   id                  String   @id @default(uuid())
@@ -332,7 +343,7 @@ model PortalState {
 }
 
 // ==========================================
-// 4. SEMINAR TABLES (4 Tables)
+// 4. SEMINAR TABLES
 // ==========================================
 model SeminarProposalBatch {
   id                 String   @id @default(uuid())
@@ -376,7 +387,7 @@ model SeminarReportFile {
 }
 
 // ==========================================
-// 5. PROJECT TABLES (11 Tables)
+// 5. PROJECT TABLES
 // ==========================================
 model SupervisorProjectConfiguration {
   id                  String   @id @default(uuid())
@@ -393,12 +404,12 @@ model SupervisorProjectConfiguration {
 }
 
 model ProposalBatch {
-  id                 String    @id @default(uuid())
+  id                 String      @id @default(uuid())
   student_mat_number String?
   subgroup_id        String?
   batch_number       Int
-  status             SubStatus @default(pending_confirmation)
-  submitted_at       DateTime  @default(now())
+  status             BatchStatus @default(pending_confirmation)
+  submitted_at       DateTime    @default(now())
   expires_at         DateTime?
 
   student       Student?               @relation(fields: [student_mat_number], references: [mat_number], onDelete: Cascade)
@@ -445,15 +456,15 @@ model Chapter {
 }
 
 model ChapterSubmission {
-  id                 String    @id @default(uuid())
+  id                 String        @id @default(uuid())
   chapter_id         String
   student_mat_number String?
   subgroup_id        String?
   file_url           String
   submission_number  Int
-  status             SubStatus @default(pending_confirmation)
+  status             BatchStatus   @default(pending_confirmation)
   supervisor_comment String?
-  submitted_at       DateTime  @default(now())
+  submitted_at       DateTime      @default(now())
   expires_at         DateTime?
 
   chapter       Chapter               @relation(fields: [chapter_id], references: [id], onDelete: Cascade)
@@ -473,15 +484,15 @@ model ChapterConfirmation {
 }
 
 model TechnicalFileSubmission {
-  id                 String    @id @default(uuid())
+  id                 String        @id @default(uuid())
   student_mat_number String?
   subgroup_id        String?
   file_url           String?
   link_url           String?
   submission_number  Int
-  status             SubStatus @default(pending_confirmation)
+  status             BatchStatus   @default(pending_confirmation)
   supervisor_comment String?
-  submitted_at       DateTime  @default(now())
+  submitted_at       DateTime      @default(now())
   expires_at         DateTime?
 
   student       Student?                    @relation(fields: [student_mat_number], references: [mat_number], onDelete: Cascade)
@@ -525,11 +536,11 @@ model FinalSubmissionConfirmation {
 }
 
 // ==========================================
-// 6. DEFENSE TABLES (6 Tables)
+// 6. DEFENSE TABLES
 // ==========================================
 model Panel {
   id               String          @id @default(uuid())
-  group_id         String          // Reference to SeminarGroup or ProjectGroup 
+  group_id         String
   panel_type       PortalPanelType
   files_available  Boolean         @default(false)
   scores_available Boolean         @default(false)
@@ -539,6 +550,8 @@ model Panel {
   project_panelists ProjectPanelist[]
   members           PanelMember[]
   rubrics           ScoringRubric[]
+  scores            Score[]              // ← ADDED
+  feedbacks         DefenseFeedback[]    // ← ADDED
 }
 
 model PanelMember {
@@ -572,7 +585,7 @@ model ScoringCriterion {
 }
 
 model Score {
-  id                  String  @id @default(uuid())
+  id                  String   @id @default(uuid())
   panel_id            String
   seminar_panelist_id String?
   project_panelist_id String?
@@ -582,40 +595,45 @@ model Score {
   score               Int
   submitted_at        DateTime @default(now())
 
-  criterion        ScoringCriterion @relation(fields: [criterion_id], references: [id], onDelete: Cascade)
-  seminar_panelist SeminarPanelist? @relation(fields: [seminar_panelist_id], references: [id], onDelete: Cascade)
-  project_panelist ProjectPanelist? @relation(fields: [project_panelist_id], references: [id], onDelete: Cascade)
+  panel              Panel              @relation(fields: [panel_id], references: [id], onDelete: Cascade)  // ← ADDED
+  criterion          ScoringCriterion   @relation(fields: [criterion_id], references: [id], onDelete: Cascade)
+  seminar_panelist   SeminarPanelist?   @relation(fields: [seminar_panelist_id], references: [id], onDelete: Cascade)
+  project_panelist   ProjectPanelist?   @relation(fields: [project_panelist_id], references: [id], onDelete: Cascade)
 }
 
 model DefenseFeedback {
-  id                  String  @id @default(uuid())
+  id                  String   @id @default(uuid())
   panel_id            String
   seminar_panelist_id String?
   project_panelist_id String?
   student_mat_number  String?
   subgroup_id         String?
   feedback_text       String
-  is_locked           Boolean @default(false)
+  is_locked           Boolean  @default(false)
   submitted_at        DateTime @default(now())
 
-  seminar_panelist SeminarPanelist? @relation(fields: [seminar_panelist_id], references: [id], onDelete: Cascade)
-  project_panelist ProjectPanelist? @relation(fields: [project_panelist_id], references: [id], onDelete: Cascade)
+  panel              Panel              @relation(fields: [panel_id], references: [id], onDelete: Cascade)  // ← ADDED
+  seminar_panelist   SeminarPanelist?   @relation(fields: [seminar_panelist_id], references: [id], onDelete: Cascade)
+  project_panelist   ProjectPanelist?   @relation(fields: [project_panelist_id], references: [id], onDelete: Cascade)
 }
 
 // ==========================================
-// 7. MESSAGING & NOTIFICATIONS (2 Tables)
+// 7. MESSAGING & NOTIFICATIONS
 // ==========================================
 model Message {
-  id                 String        @id @default(uuid())
-  sender_id          String
-  sender_role        SenderRole
-  recipient_type     RecipientType
-  recipient_group_id String?
-  content            String
-  created_at         DateTime      @default(now())
+  id                  String        @id @default(uuid())
+  sender_id           String
+  sender_role         SenderRole
+  recipient_type      RecipientType
+  recipient_group_id  String?
+  subject             String?
+  content             String
+  created_at          DateTime      @default(now())
 
-  sender         User          @relation(fields: [sender_id], references: [id], onDelete: Cascade)
-  project_group  ProjectGroup? @relation(fields: [recipient_group_id], references: [id], onDelete: Cascade)
+  sender         User          @relation(fields: [sender_id], references: [id])
+  project_group  ProjectGroup? @relation(fields: [recipient_group_id], references: [id])
+
+  @@map("messages")
 }
 
 model Notification {
@@ -623,8 +641,11 @@ model Notification {
   recipient_id String
   type         NotificationType
   message      String
+  action_url   String?
   is_read      Boolean          @default(false)
   created_at   DateTime         @default(now())
 
-  recipient User @relation(fields: [recipient_id], references: [id], onDelete: Cascade)
+  recipient User @relation(fields: [recipient_id], references: [id])
+
+  @@map("notifications")
 }
