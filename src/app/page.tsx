@@ -14,6 +14,10 @@ export default async function Home() {
       redirect('/setup');
     }
   } catch (error) {
+    // Re-throw Next.js redirect errors (they use throw internally)
+    if (error instanceof Error && 'digest' in error) {
+      throw error;
+    }
     console.error('Database connection error:', error);
     // If database is unreachable, default to setup page
     redirect('/setup');
